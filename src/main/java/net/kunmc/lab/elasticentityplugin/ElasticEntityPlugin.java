@@ -1,8 +1,8 @@
-package net.kunmc.lab.paperplugintemplate;
+package net.kunmc.lab.elasticentityplugin;
 
 import org.bukkit.plugin.java.JavaPlugin;
 
-public final class PaperPluginTemplate extends JavaPlugin {
+public final class ElasticEntityPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
     }

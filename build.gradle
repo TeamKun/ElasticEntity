@@ -1,3 +1,4 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation
 import org.apache.tools.ant.filters.ReplaceTokens
 
 import java.nio.file.Files
@@ -32,15 +33,13 @@ dependencies {
     compileOnly "com.destroystokyo.paper:paper-api:1.16.5-R0.1-SNAPSHOT"
     //compileOnly "com.comphenix.protocol:ProtocolLib:4.7.0"
     //compileOnly fileTree(dir: "./server/cache/", include: "patched_1.16.5.jar")
-    //implementation "dev.kotx:flylib-reloaded:0.4.1"
+    implementation "dev.kotx:flylib-reloaded:0.4.1"
 }
 
-//import com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation
-//task relocateShadow(type: ConfigureShadowRelocation) {
-//    target = tasks.shadowJar
-//    prefix = project.group
-//}
-
+task relocateShadow(type: ConfigureShadowRelocation) {
+    target = tasks.shadowJar
+    prefix = project.group
+}
 tasks.shadowJar.dependsOn tasks.relocateShadow
 
 def targetJavaVersion = 8
