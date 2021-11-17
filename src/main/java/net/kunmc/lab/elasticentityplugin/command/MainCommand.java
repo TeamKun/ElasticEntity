@@ -7,6 +7,6 @@ import org.jetbrains.annotations.NotNull;
 public class MainCommand extends Command {
     public MainCommand(@NotNull String name, ConfigCommand configCommand) {
         super(name);
-        children(configCommand);
+        children(configCommand, new StartCommand());
     }
 }
