@@ -12,6 +12,9 @@ public final class ElasticEntityPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         GameConfig config = new GameConfig(this);
+        config.saveConfigIfAbsent();
+        config.loadConfig();
+       
         game = new Game(this, config);
 
         ConfigCommand configCommand = new ConfigCommandBuilder(config).build();

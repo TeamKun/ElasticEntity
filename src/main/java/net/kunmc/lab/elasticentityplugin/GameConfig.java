@@ -17,6 +17,5 @@ public class GameConfig extends BaseConfig {
 
     public GameConfig(@NotNull Plugin plugin) {
         super(plugin, "game");
-        this.saveConfigIfAbsent();
     }
 }
