@@ -73,6 +73,10 @@ public class ElasticEntity {
         return entityBoundingBox.overlaps(boundingBox);
     }
 
+    public void remove() {
+        entity.remove();
+    }
+
     private class MoveTask extends BukkitRunnable {
         @Override
         public void run() {
