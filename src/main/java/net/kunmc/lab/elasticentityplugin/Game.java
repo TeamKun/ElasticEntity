@@ -1,2 +1,211 @@
-package net.kunmc.lab.elasticentityplugin;public class Game {
+package net.kunmc.lab.elasticentityplugin;
+
+import net.kunmc.lab.elasticentityplugin.entity.ElasticEntity;
+import net.kyori.adventure.text.Component;
+import org.bukkit.*;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.Vector;
+
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+public class Game implements Listener {
+    private final Plugin plugin;
+    public final GameConfig config;
+    private boolean isRunning = false;
+    private Location center;
+    private int currentRound;
+    private double amountOfMobs;
+    private Set<Player> participants = new HashSet<>();
+    private BukkitTask mainTask;
+    private List<ElasticEntity> entityList = new ArrayList<>();
+    private EntityType entityType = EntityType.CREEPER;
+
+    public Game(Plugin plugin, GameConfig config) {
+        this.plugin = plugin;
+        this.config = config;
+
+        Bukkit.getPluginManager().registerEvents(this, plugin);
+    }
+
+    public boolean start(Location center) {
+        if (isRunning) {
+            return false;
+        }
+        isRunning = true;
+
+        this.center = center;
+        currentRound = 0;
+        amountOfMobs = config.amountInFirstRound.value();
+        participants.addAll(Bukkit.getOnlinePlayers().stream()
+                .filter(u -> !config.spectators.contains(u))
+                .collect(Collectors.toSet()));
+        entityList.clear();
+
+        createSquare();
+
+        center.getWorld().setGameRule(GameRule.FALL_DAMAGE, false);
+
+        Location to = center.clone().subtract(0, config.lengthOfSide.value() / 2 - 2, 0);
+        participants.forEach(p -> {
+            p.setGameMode(GameMode.ADVENTURE);
+            p.teleport(to);
+        });
+
+        nextRound();
+
+        mainTask = new MainTask().runTaskTimer(plugin, 0, 1);
+
+        return true;
+    }
+
+    private void createSquare() {
+        Location center = this.center.clone();
+        int radius = config.lengthOfSide.value() / 2;
+
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z < radius; z++) {
+                center.clone().add(x, -radius, z).getBlock().setType(Material.STONE_BRICKS);
+                center.clone().add(x, radius, z).getBlock().setType(Material.BLUE_STAINED_GLASS);
+            }
+        }
+
+        for (int y = -radius; y <= radius; y++) {
+            for (int x = -radius; x < radius; x++) {
+                center.clone().add(x, y, -radius).getBlock().setType(Material.BLUE_STAINED_GLASS);
+                center.clone().add(x, y, radius).getBlock().setType(Material.BLUE_STAINED_GLASS);
+            }
+
+            for (int z = -radius; z <= radius; z++) {
+                center.clone().add(-radius, y, z).getBlock().setType(Material.BLUE_STAINED_GLASS);
+                center.clone().add(radius, y, z).getBlock().setType(Material.BLUE_STAINED_GLASS);
+            }
+        }
+    }
+
+    public boolean stop() {
+        if (!isRunning) {
+            return false;
+        }
+        isRunning = false;
+
+        participants.clear();
+        entityList.forEach(ElasticEntity::remove);
+
+        mainTask.cancel();
+
+        return true;
+    }
+
+    public void nextRound() {
+        currentRound++;
+        Bukkit.getOnlinePlayers().forEach(p -> {
+            p.sendTitle("Round " + currentRound, "", 10, 40, 10);
+        });
+
+        IntStream.range(0, ((int) amountOfMobs))
+                .mapToObj(i -> new ElasticEntity(center, entityType, plugin))
+                .forEach(entityList::add);
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < entityList.size(); i++) {
+                    ElasticEntity e = entityList.get(i);
+                    new BukkitRunnable() {
+                        private final Random rnd = new Random();
+
+                        @Override
+                        public void run() {
+                            Vector direction = new Vector(rnd.nextDouble() - 0.5, rnd.nextDouble() - 0.5, rnd.nextDouble() - 0.5);
+                            e.direction(direction);
+                            e.speed(config.speed.value());
+                        }
+                    }.runTaskLater(plugin, 10 * i);
+                }
+
+                amountOfMobs += config.increasePerRound.value();
+            }
+        }.runTaskLater(plugin, 50);
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent e) {
+        if (participants.remove(e.getPlayer())) {
+            Bukkit.broadcast(Component.text(ChatColor.YELLOW + e.getPlayer().getName() + "がゲームから退出しました."));
+        }
+    }
+
+    private class MainTask extends BukkitRunnable {
+        @Override
+        public void run() {
+            Set<Player> dropouts = processCollision();
+
+            dropouts.forEach(p -> {
+                p.setGameMode(GameMode.SPECTATOR);
+                participants.remove(p);
+            });
+
+            if (participants.size() <= 1) {
+                Player winner = participants.toArray(new Player[0])[0];
+                Bukkit.getOnlinePlayers().forEach(p -> {
+                    p.sendTitle(ChatColor.AQUA + "勝者 " + winner.getName(), "", 20, 100, 20);
+                    stop();
+                });
+            } else if (entityList.size() == 0) {
+                nextRound();
+            }
+        }
+
+        public Set<Player> processCollision() {
+            Set<Player> dropouts = new HashSet<>();
+
+            for (ElasticEntity e : entityList) {
+                for (Player p : participants) {
+                    if (e.isCollideWith(p)) {
+                        dropouts.add(p);
+                        explode(e, p);
+                        break;
+                    }
+                }
+
+                if (participants.size() - dropouts.size() <= 1) {
+                    break;
+                }
+            }
+
+            entityList = entityList.stream()
+                    .filter(e -> !e.isRemoved())
+                    .collect(Collectors.toList());
+
+            return dropouts;
+        }
+
+        public void explode(ElasticEntity e, Player p) {
+            Location location = e.location();
+            World world = location.getWorld();
+
+            world.spawnParticle(Particle.EXPLOSION_LARGE, location, 3);
+            world.playSound(location, Sound.ENTITY_GENERIC_EXPLODE, 0.5F, 0.5F);
+
+            e.remove();
+            p.setHealth(0.0);
+        }
+
+        private void sleep(long millis) {
+            try {
+                Thread.sleep(millis);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }
