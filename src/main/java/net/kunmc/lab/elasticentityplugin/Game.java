@@ -3,6 +3,7 @@ package net.kunmc.lab.elasticentityplugin;
 import net.kunmc.lab.elasticentityplugin.entity.ElasticEntity;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -20,6 +21,7 @@ import java.util.stream.IntStream;
 public class Game implements Listener {
     private final Plugin plugin;
     public final GameConfig config;
+    private final TaskScheduler taskScheduler;
     private boolean isRunning = false;
     private Location center;
     private int currentRound;
@@ -32,17 +34,21 @@ public class Game implements Listener {
     public Game(Plugin plugin, GameConfig config) {
         this.plugin = plugin;
         this.config = config;
+        this.taskScheduler = new TaskScheduler(plugin);
 
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
-    public boolean start(Location center) {
+    public boolean start(Location location) {
         if (isRunning) {
             return false;
         }
         isRunning = true;
 
-        this.center = center;
+        center = location.clone();
+        int y = location.getWorld().getHighestBlockYAt(location) + config.height.value() / 2 + 5;
+        center.setY(y);
+
         currentRound = 0;
         amountOfMobs = config.amountInFirstRound.value();
         participants.addAll(Bukkit.getOnlinePlayers().stream()
@@ -50,11 +56,11 @@ public class Game implements Listener {
                 .collect(Collectors.toSet()));
         entityList.clear();
 
-        createSquare();
+        generateStage();
 
         center.getWorld().setGameRule(GameRule.FALL_DAMAGE, false);
 
-        Location to = center.clone().subtract(0, config.lengthOfSide.value() / 2 - 2, 0);
+        Location to = center.clone().subtract(5, config.height.value() / 2 - 5, 0);
         participants.forEach(p -> {
             p.setGameMode(GameMode.ADVENTURE);
             p.teleport(to);
@@ -67,26 +73,52 @@ public class Game implements Listener {
         return true;
     }
 
-    private void createSquare() {
+    private void generateStage() {
         Location center = this.center.clone();
+        int halfOfHeight = config.height.value() / 2;
         int radius = config.lengthOfSide.value() / 2;
 
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z < radius; z++) {
-                center.clone().add(x, -radius, z).getBlock().setType(Material.STONE_BRICKS);
-                center.clone().add(x, radius, z).getBlock().setType(Material.BLUE_STAINED_GLASS);
+                int finalX = x;
+                int finalZ = z;
+                taskScheduler.offer(() -> {
+                    center.clone().add(finalX, -halfOfHeight, finalZ).getBlock().setType(Material.STONE_BRICKS);
+                    center.clone().add(finalX, halfOfHeight, finalZ).getBlock().setType(Material.BLUE_STAINED_GLASS);
+                });
             }
         }
 
-        for (int y = -radius; y <= radius; y++) {
+        for (int y = -halfOfHeight; y <= halfOfHeight; y++) {
             for (int x = -radius; x < radius; x++) {
-                center.clone().add(x, y, -radius).getBlock().setType(Material.BLUE_STAINED_GLASS);
-                center.clone().add(x, y, radius).getBlock().setType(Material.BLUE_STAINED_GLASS);
+                int finalX = x;
+                int finalY = y;
+                taskScheduler.offer(() -> {
+                    center.clone().add(finalX, finalY, -radius).getBlock().setType(Material.BLUE_STAINED_GLASS);
+                    center.clone().add(finalX, finalY, radius).getBlock().setType(Material.BLUE_STAINED_GLASS);
+                });
             }
 
             for (int z = -radius; z <= radius; z++) {
-                center.clone().add(-radius, y, z).getBlock().setType(Material.BLUE_STAINED_GLASS);
-                center.clone().add(radius, y, z).getBlock().setType(Material.BLUE_STAINED_GLASS);
+                int finalY = y;
+                int finalZ = z;
+                taskScheduler.offer(() -> {
+                    center.clone().add(-radius, finalY, finalZ).getBlock().setType(Material.BLUE_STAINED_GLASS);
+                    center.clone().add(radius, finalY, finalZ).getBlock().setType(Material.BLUE_STAINED_GLASS);
+                });
+            }
+        }
+
+        for (int x = -radius + 1; x <= radius - 1; x++) {
+            for (int z = -radius + 1; z <= radius - 1; z++) {
+                for (int y = -halfOfHeight + 1; y <= halfOfHeight - 1; y++) {
+                    Block b = center.clone().add(x, y, z).getBlock();
+                    if (b.getType() != Material.AIR) {
+                        taskScheduler.offer(() -> {
+                            b.setType(Material.AIR);
+                        });
+                    }
+                }
             }
         }
     }
