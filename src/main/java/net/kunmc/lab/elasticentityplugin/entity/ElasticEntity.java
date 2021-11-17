@@ -77,6 +77,14 @@ public class ElasticEntity {
         entity.remove();
     }
 
+    public Location location() {
+        return entity.getLocation();
+    }
+
+    public boolean isRemoved() {
+        return entity.isDead();
+    }
+
     private class MoveTask extends BukkitRunnable {
         @Override
         public void run() {
