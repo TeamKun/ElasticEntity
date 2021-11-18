@@ -65,9 +65,7 @@ public class ElasticEntity {
     }
 
     public boolean isCollideWith(Block block) {
-        BoundingBox boundingBox = this.entity.getBoundingBox()
-                .expand(1.0)
-                .expandDirectional(0, -1.0, 0);
+        BoundingBox boundingBox = this.entity.getBoundingBox().expand(1.0);
         return boundingBox.overlaps(block.getBoundingBox());
     }
 
