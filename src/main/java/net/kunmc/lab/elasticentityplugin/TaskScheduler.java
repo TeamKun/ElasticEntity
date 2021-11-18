@@ -1,6 +1,5 @@
 package net.kunmc.lab.elasticentityplugin;
 
-import net.kunmc.lab.elasticentityplugin.function.Executor;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -26,11 +25,11 @@ public class TaskScheduler {
         }.runTaskTimerAsynchronously(plugin, 0, 0);
     }
 
-    public void offer(Executor executor) {
+    public void offer(Runnable runnable) {
         deque.offer(new BukkitRunnable() {
             @Override
             public void run() {
-                executor.execute();
+                runnable.run();
             }
         });
     }

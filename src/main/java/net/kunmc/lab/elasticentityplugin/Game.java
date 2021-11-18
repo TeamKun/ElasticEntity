@@ -1,7 +1,6 @@
 package net.kunmc.lab.elasticentityplugin;
 
 import net.kunmc.lab.elasticentityplugin.entity.ElasticEntity;
-import net.kunmc.lab.elasticentityplugin.function.Executor;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -189,10 +188,10 @@ public class Game implements Listener {
         });
     }
 
-    private void runWithLock(Executor executor) {
+    private void runWithLock(Runnable runnable) {
         lock.lock();
         try {
-            executor.execute();
+            runnable.run();
         } finally {
             lock.unlock();
         }
@@ -251,11 +250,11 @@ public class Game implements Listener {
             });
         }
 
-        public void runSynchronous(Executor executor) {
+        public void runSynchronous(Runnable runnable) {
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    executor.execute();
+                    runnable.run();
                 }
             }.runTask(plugin);
         }
