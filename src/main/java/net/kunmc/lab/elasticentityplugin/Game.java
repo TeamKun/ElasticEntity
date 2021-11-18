@@ -240,13 +240,11 @@ public class Game implements Listener {
         }
 
         public void explode(ElasticEntity e, Player p) {
-            Location location = e.location();
-            World world = location.getWorld();
-
-            world.spawnParticle(Particle.EXPLOSION_LARGE, location, 3);
-            world.playSound(location, Sound.ENTITY_GENERIC_EXPLODE, 0.5F, 0.5F);
-
             runSynchronous(() -> {
+                Location location = e.location();
+                World world = location.getWorld();
+                world.spawnParticle(Particle.EXPLOSION_LARGE, location, 3);
+                world.playSound(location, Sound.ENTITY_GENERIC_EXPLODE, 0.5F, 0.5F);
                 e.remove();
                 p.setHealth(0.0);
                 p.setGameMode(GameMode.SPECTATOR);
