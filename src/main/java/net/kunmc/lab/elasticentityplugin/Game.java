@@ -43,11 +43,19 @@ public class Game implements Listener {
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
-    public boolean start(Location location) {
+    public int start(Location location) {
         if (isRunning) {
-            return false;
+            return 1;
         }
         isRunning = true;
+
+        participants.addAll(Bukkit.getOnlinePlayers().stream()
+                .filter(u -> !config.spectators.contains(u.getUniqueId()))
+                .collect(Collectors.toSet()));
+        if (participants.isEmpty()) {
+            isRunning = false;
+            return 2;
+        }
 
         center = location.clone();
         int y = location.getWorld().getHighestBlockYAt(location) + config.height.value() / 2 + 5;
@@ -55,9 +63,6 @@ public class Game implements Listener {
 
         currentRound = 0;
         amountOfMobs = config.amountInFirstRound.value();
-        participants.addAll(Bukkit.getOnlinePlayers().stream()
-                .filter(u -> !config.spectators.contains(u.getUniqueId()))
-                .collect(Collectors.toSet()));
         entityList.clear();
 
         generateStage();
@@ -76,7 +81,7 @@ public class Game implements Listener {
         tasks.add(new MainTask().runTaskTimer(plugin, 0, 1));
         tasks.add(new DetectCollisionTask().runTaskTimerAsynchronously(plugin, 0, 0));
 
-        return true;
+        return 0;
     }
 
     private void generateStage() {

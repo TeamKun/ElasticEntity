@@ -21,10 +21,13 @@ public class StartCommand extends Command {
             return;
         }
 
-        if (game.start(p.getLocation())) {
+        int status = game.start(p.getLocation());
+        if (status == 0) {
             ctx.success("ゲームをスタートしました.");
-        } else {
+        } else if (status == 1) {
             ctx.fail("ゲームはすでにスタートされています.");
+        } else {
+            ctx.fail("ゲームの参加者が0人だったためスタートされませんでした.");
         }
     }
 }
