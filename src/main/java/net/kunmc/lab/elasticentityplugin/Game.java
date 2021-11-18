@@ -217,8 +217,6 @@ public class Game implements Listener {
         @Override
         public void run() {
             runWithLock(() -> {
-                participants.removeIf(p -> p.getGameMode() == GameMode.SPECTATOR);
-
                 if (participants.size() == 0) {
                     Bukkit.getOnlinePlayers().forEach(p -> {
                         p.sendTitle(ChatColor.GREEN + "引き分け", "", 20, 100, 20);
@@ -249,21 +247,27 @@ public class Game implements Listener {
         @Override
         public void run() {
             runWithLock(() -> {
-                int cnt = 0;
+                Set<Player> dropouts = new HashSet<>();
 
                 for (ElasticEntity e : entityList) {
                     for (Player p : participants) {
                         if (e.isCollideWith(p)) {
-                            cnt++;
                             explode(e, p);
+
+                            Bukkit.getOnlinePlayers().forEach(recipient -> {
+                                recipient.sendMessage(Component.text(ChatColor.RED + p.getName() + "が脱落した"));
+                            });
+                            dropouts.add(p);
                             break;
                         }
                     }
 
-                    if (participants.size() - cnt <= 1) {
+                    if (participants.size() - dropouts.size() <= 1) {
                         break;
                     }
                 }
+
+                participants.removeAll(dropouts);
             });
         }
 
@@ -278,9 +282,6 @@ public class Game implements Listener {
                 p.setHealth(0.0);
 
                 p.setGameMode(GameMode.SPECTATOR);
-                Bukkit.getOnlinePlayers().forEach(recipient -> {
-                    recipient.sendMessage(Component.text(ChatColor.RED + p.getName() + "が脱落した"));
-                });
             });
         }
 
