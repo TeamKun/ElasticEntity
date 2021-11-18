@@ -6,7 +6,6 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -14,18 +13,18 @@ import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
+import java.util.function.Consumer;
+
 public class ElasticEntity {
     private final Entity entity;
     private Vector direction = new Vector(0, 0, 0);
     private double speed = 0.0;
 
-    public ElasticEntity(Location location, EntityType entityType, Plugin plugin) {
+    public ElasticEntity(Location location, EntityType entityType, Plugin plugin, Consumer<Entity> consumer) {
         this(location.getWorld().spawnEntity(location, entityType, CreatureSpawnEvent.SpawnReason.CUSTOM, e -> {
             e.setGravity(false);
             e.setInvulnerable(true);
-            if (e instanceof LivingEntity) {
-                ((LivingEntity) e).setAI(false);
-            }
+            consumer.accept(e);
         }), plugin);
     }
 
@@ -61,16 +60,15 @@ public class ElasticEntity {
     }
 
     public boolean isCollideWith(Entity entity) {
-        return isCollideWith(entity.getBoundingBox());
+        BoundingBox boundingBox = this.entity.getBoundingBox().expand(0.25);
+        return boundingBox.overlaps(entity.getBoundingBox());
     }
 
     public boolean isCollideWith(Block block) {
-        return isCollideWith(block.getBoundingBox());
-    }
-
-    private boolean isCollideWith(BoundingBox boundingBox) {
-        BoundingBox entityBoundingBox = entity.getBoundingBox().expand(0.25);
-        return entityBoundingBox.overlaps(boundingBox);
+        BoundingBox boundingBox = this.entity.getBoundingBox()
+                .expand(1.0)
+                .expandDirectional(0, -1.0, 0);
+        return boundingBox.overlaps(block.getBoundingBox());
     }
 
     public void remove() {
@@ -95,22 +93,22 @@ public class ElasticEntity {
 
             RayTraceResult rayTraceResult = rayTrace();
             if (rayTraceResult == null || rayTraceResult.getHitBlock() == null) {
-                entity.teleportAsync(nextLocation());
+                entity.setVelocity(calcVelocity());
                 return;
             }
             if (!isCollideWith(rayTraceResult.getHitBlock())) {
-                entity.teleportAsync(nextLocation());
+                entity.setVelocity(calcVelocity());
                 return;
             }
 
             Vector normal = rayTraceResult.getHitBlockFace().getDirection();
             direction = VectorUtil.toUnit(direction.clone().add(direction.clone().multiply(-1).multiply(normal).multiply(2).multiply(normal)));
 
-            entity.teleportAsync(nextLocation());
+            entity.setVelocity(calcVelocity());
         }
 
-        public Location nextLocation() {
-            return entity.getLocation().add(direction.clone().multiply(speed / 20));
+        public Vector calcVelocity() {
+            return direction.clone().multiply(speed);
         }
 
         public RayTraceResult rayTrace() {
@@ -121,7 +119,7 @@ public class ElasticEntity {
             BoundingBox boundingBox = entity.getBoundingBox();
             World w = entity.getWorld();
 
-            return w.rayTraceBlocks(boundingBox.getCenter().toLocation(w), direction, 3);
+            return w.rayTraceBlocks(boundingBox.getCenter().toLocation(w), direction, 5);
         }
     }
 }
