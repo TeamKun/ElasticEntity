@@ -67,7 +67,9 @@ public class Game implements Listener {
 
         generateStage();
 
-        center.getWorld().setGameRule(GameRule.FALL_DAMAGE, false);
+        World w = center.getWorld();
+        w.setGameRule(GameRule.FALL_DAMAGE, false);
+        w.setGameRule(GameRule.SHOW_DEATH_MESSAGES, false);
 
         Location to = center.clone().subtract(5, config.height.value() / 2 - 5, 0);
         participants.forEach(p -> {
@@ -227,8 +229,10 @@ public class Game implements Listener {
 
                 if (participants.size() == 1) {
                     Player winner = participants.toArray(new Player[0])[0];
+                    String msg = ChatColor.AQUA + "勝者 " + winner.getName();
                     Bukkit.getOnlinePlayers().forEach(p -> {
-                        p.sendTitle(ChatColor.AQUA + "勝者 " + winner.getName(), "", 20, 100, 20);
+                        p.sendTitle(msg, "", 20, 100, 20);
+                        p.sendMessage(msg);
                         stop();
                     });
                     return;
@@ -274,6 +278,9 @@ public class Game implements Listener {
                 p.setHealth(0.0);
 
                 p.setGameMode(GameMode.SPECTATOR);
+                Bukkit.getOnlinePlayers().forEach(recipient -> {
+                    recipient.sendMessage(Component.text(ChatColor.RED + p.getName() + "が脱落した"));
+                });
             });
         }
 
