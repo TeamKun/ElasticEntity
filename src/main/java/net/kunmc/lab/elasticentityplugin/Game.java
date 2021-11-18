@@ -57,7 +57,7 @@ public class Game implements Listener {
         currentRound = 0;
         amountOfMobs = config.amountInFirstRound.value();
         participants.addAll(Bukkit.getOnlinePlayers().stream()
-                .filter(u -> !config.spectators.contains(u))
+                .filter(u -> !config.spectators.contains(u.getUniqueId()))
                 .collect(Collectors.toSet()));
         entityList.clear();
 
