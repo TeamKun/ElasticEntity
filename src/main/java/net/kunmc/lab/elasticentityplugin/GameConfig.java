@@ -8,8 +8,8 @@ import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 
 public class GameConfig extends BaseConfig {
-    public IntegerValue height = new IntegerValue(15, 5, 100);
-    public IntegerValue lengthOfSide = new IntegerValue(40, 10, 100);
+    public IntegerValue height = new IntegerValue(15, 8, 100);
+    public IntegerValue lengthOfSide = new IntegerValue(40, 20, 100);
     public DoubleValue speed = new DoubleValue(1.0, 0.1, 30.0, d -> {
         ElasticEntityPlugin.game.changeSpeed(d);
     });
