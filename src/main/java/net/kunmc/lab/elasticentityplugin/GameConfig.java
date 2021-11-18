@@ -8,10 +8,10 @@ import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 
 public class GameConfig extends BaseConfig {
-    public IntegerValue height = new IntegerValue(40, 5, 100);
+    public IntegerValue height = new IntegerValue(15, 5, 100);
     public IntegerValue lengthOfSide = new IntegerValue(40, 10, 100);
-    public DoubleValue speed = new DoubleValue(6.0);
-    public IntegerValue amountInFirstRound = new IntegerValue(1, 1, 100);
+    public DoubleValue speed = new DoubleValue(1.0);
+    public IntegerValue amountInFirstRound = new IntegerValue(10, 1, 100);
     public DoubleValue increasePerRound = new DoubleValue(1.0, 0.0, 100.0);
     public UUIDSetValue spectators = new UUIDSetValue();
 
