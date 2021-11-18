@@ -150,6 +150,7 @@ public class Game implements Listener {
 
     public void nextRound() {
         entityList.forEach(ElasticEntity::remove);
+        entityList.clear();
 
         currentRound++;
         Bukkit.getOnlinePlayers().forEach(p -> {
@@ -193,6 +194,14 @@ public class Game implements Listener {
         });
     }
 
+    public void changeSpeed(double speed) {
+        runWithLock(() -> {
+            entityList.forEach(e -> {
+                e.speed(speed);
+            });
+        });
+    }
+
     private void runWithLock(Runnable runnable) {
         lock.lock();
         try {
@@ -208,13 +217,24 @@ public class Game implements Listener {
             runWithLock(() -> {
                 participants.removeIf(p -> p.getGameMode() == GameMode.SPECTATOR);
 
-                if (participants.size() <= 1) {
+                if (participants.size() == 0) {
+                    Bukkit.getOnlinePlayers().forEach(p -> {
+                        p.sendTitle(ChatColor.GREEN + "引き分け", "", 20, 100, 20);
+                        stop();
+                    });
+                    return;
+                }
+
+                if (participants.size() == 1) {
                     Player winner = participants.toArray(new Player[0])[0];
                     Bukkit.getOnlinePlayers().forEach(p -> {
                         p.sendTitle(ChatColor.AQUA + "勝者 " + winner.getName(), "", 20, 100, 20);
                         stop();
                     });
-                } else if (entityList.stream().anyMatch(ElasticEntity::isRemoved)) {
+                    return;
+                }
+
+                if (entityList.stream().anyMatch(ElasticEntity::isRemoved)) {
                     nextRound();
                 }
             });
@@ -225,18 +245,18 @@ public class Game implements Listener {
         @Override
         public void run() {
             runWithLock(() -> {
-                Set<Player> dropouts = new HashSet<>();
+                int cnt = 0;
 
                 for (ElasticEntity e : entityList) {
                     for (Player p : participants) {
                         if (e.isCollideWith(p)) {
-                            dropouts.add(p);
+                            cnt++;
                             explode(e, p);
                             break;
                         }
                     }
 
-                    if (participants.size() - dropouts.size() <= 1) {
+                    if (participants.size() - cnt <= 1) {
                         break;
                     }
                 }
@@ -247,10 +267,12 @@ public class Game implements Listener {
             runSynchronous(() -> {
                 Location location = e.location();
                 World world = location.getWorld();
+
                 world.spawnParticle(Particle.EXPLOSION_LARGE, location, 3);
                 world.playSound(location, Sound.ENTITY_GENERIC_EXPLODE, 0.5F, 0.5F);
                 e.remove();
                 p.setHealth(0.0);
+
                 p.setGameMode(GameMode.SPECTATOR);
             });
         }

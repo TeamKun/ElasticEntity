@@ -14,7 +14,7 @@ public final class ElasticEntityPlugin extends JavaPlugin {
         GameConfig config = new GameConfig(this);
         config.saveConfigIfAbsent();
         config.loadConfig();
-       
+
         game = new Game(this, config);
 
         ConfigCommand configCommand = new ConfigCommandBuilder(config).build();
