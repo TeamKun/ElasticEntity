@@ -76,6 +76,7 @@ public class Game implements Listener {
             p.spigot().respawn();
             p.setGameMode(GameMode.ADVENTURE);
             p.teleport(to);
+            p.setBedSpawnLocation(center, true);
         });
 
         nextRound();
@@ -120,6 +121,15 @@ public class Game implements Listener {
                     center.clone().add(radius, finalY, finalZ).getBlock().setType(Material.BLUE_STAINED_GLASS);
                 });
             }
+
+            //角に溶岩を設置する
+            taskScheduler.offer(() -> {
+                int height = -halfOfHeight + 2;
+                center.clone().add(-radius + 1, height, -radius + 1).getBlock().setType(Material.LAVA);
+                center.clone().add(radius - 1, height, -radius + 1).getBlock().setType(Material.LAVA);
+                center.clone().add(-radius + 1, height, radius - 1).getBlock().setType(Material.LAVA);
+                center.clone().add(radius - 1, height, radius - 1).getBlock().setType(Material.LAVA);
+            });
         }
 
         for (int x = -radius + 1; x <= radius - 1; x++) {
