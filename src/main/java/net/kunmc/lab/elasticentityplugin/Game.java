@@ -9,6 +9,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -74,9 +75,11 @@ public class Game implements Listener {
         Location to = center.clone().subtract(5, config.height.value() / 2 - 5, 0);
         participants.forEach(p -> {
             p.spigot().respawn();
+            p.setHealth(p.getMaxHealth());
             p.setGameMode(GameMode.ADVENTURE);
-            p.teleport(to);
+            p.getInventory().clear();
             p.setBedSpawnLocation(center, true);
+            p.teleport(to);
         });
 
         nextRound();
@@ -206,6 +209,20 @@ public class Game implements Listener {
         });
     }
 
+    @EventHandler
+    public void onPlayerDeath(PlayerDeathEvent e) {
+        runWithLock(() -> {
+            Player p = e.getEntity();
+            if (participants.remove(p)) {
+                p.setGameMode(GameMode.SPECTATOR);
+
+                Bukkit.getOnlinePlayers().forEach(recipient -> {
+                    recipient.sendMessage(Component.text(ChatColor.RED + p.getName() + "が脱落した"));
+                });
+            }
+        });
+    }
+
     public void changeSpeed(double speed) {
         runWithLock(() -> {
             entityList.forEach(e -> {
@@ -249,6 +266,10 @@ public class Game implements Listener {
                 if (entityList.stream().anyMatch(ElasticEntity::isRemoved)) {
                     nextRound();
                 }
+
+                participants.forEach(p -> {
+                    p.setFoodLevel(20);
+                });
             });
         }
     }
